@@ -1,0 +1,394 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## LESSON 7: Removing Noise From Short-Read Raw Data: Trimming and Filtering Workflows\n",
+    "\n",
+    "We've reviewed our quality control (QC) reports and taken an \"X-ray\" of our raw data. Now we need to remove sequencing-induced signal noise to prepare our raw data for the alignment (mapping) step with tools like BWA-MEM.\n",
+    "\n",
+    "Removing noise from raw data in bioinformatics consists of two distinct, sequential mechanical steps:\n",
+    "1. **Trimming:** Cutting off technical adapter sequences or bases with dropped Phred quality at the ends of a read.\n",
+    "2. **Filtering:** After trimming is complete, asking \"Is what's left of this read still long/good enough for my analysis?\" and removing reads that don't meet the criteria from the dataset entirely.\n",
+    "\n",
+    "### 7.1. Short-Read Raw Data: Illumina and Ion Torrent Approaches\n",
+    "* **Illumina (Paired-End) Data:** Offers a high-throughput raw data profile, but with increasing substitution noise toward the ends of reads. To avoid breaking the synchronization between the forward (R1) and reverse (R2) read files, noise removal must be run simultaneously (in paired-end mode).\n",
+    "* **Ion Torrent (Single-End) Data:** Usually read in a single direction. Substitution errors are rare, but the raw data has a lot of deletion/insertion noise in homopolymer regions. So trimming and filtering are carried out on a single file.\n",
+    "\n",
+    "### 7.2. Tool We'll Use: Cutadapt (All-in-One Solution)\n",
+    "We're installing `Cutadapt`, the industry-standard tool that can do both trimming and filtering on short-read raw data at the same time, with a lot of parameter flexibility, on our virtual machine."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# LESSON 7.2. COLAB TERMINAL GUIDE: Installing Cutadapt\n",
+    "print(\"Installing the short-read noise removal tool (Cutadapt)...\\n\")\n",
+    "\n",
+    "!sudo apt-get update\n",
+    "!sudo apt-get install cutadapt -y\n",
+    "\n",
+    "print(\"\\nGreat! Cutadapt installation completed successfully.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 7.3. Applying It: Trimming and Filtering the Illumina Raw Data\n",
+    "The Cutadapt command in the cell below performs the two tasks we've been reviewing on our raw data:\n",
+    "* `-a` and `-A` **(Trimming):** cuts the universal Illumina adapter noise from the forward and reverse reads.\n",
+    "* `-q 20` **(Trimming):** shaves off noisy end regions where the Phred quality score drops below 20.\n",
+    "* `-m 30` **(Filtering):** completely filters out reads from the dataset that end up shorter than 30 bases after trimming, since they're no longer useful."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# LESSON 7.3. COLAB APPLICATION: Illumina Workflow With Cutadapt\n",
+    "!mkdir -p filtered_reads\n",
+    "\n",
+    "print(\"TRIMMING AND FILTERING the ILLUMINA (Paired-End) raw data...\\n\")\n",
+    "\n",
+    "!cutadapt -a AGATCGGAAGAG -A AGATCGGAAGAG \\\n",
+    "    -q 20 -m 30 \\\n",
+    "    -o filtered_reads/filtered_SRR13680736_1.fastq \\\n",
+    "    -p filtered_reads/filtered_SRR13680736_2.fastq \\\n",
+    "    SRR13680736_1.fastq SRR13680736_2.fastq\n",
+    "\n",
+    "print(\"\\nNoise removal for the Illumina data completed successfully. Clean outputs are in the 'filtered_reads/' folder.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 7.4. Footnote: What If We Work With Ion Torrent Raw Data in the Future?\n",
+    "\n",
+    "Our current project is based on hybrid Illumina and Nanopore raw data. But if one day in your career you come across raw data from an Ion Torrent instrument, your strategy and command structure needs to change as follows:\n",
+    "\n",
+    "1. **Single-File Handling:** files will be in single-direction (**Single-End**) format, not a pair (R1/R2).\n",
+    "2. **Adapter Change:** instead of the universal Illumina adapters, you need to trim the instrument-specific Ion A or P1 technical adapter sequences.\n",
+    "3. **Command Structure:** since there's no reverse read file, the `-A` (second adapter) and `-p` (second output file) parameters are not used in the `Cutadapt` command. You only proceed with the `-a`, `-q` and `-m` parameters.\n",
+    "\n",
+    "**Application Tip:** If you later download an independent accession produced with Ion Torrent technology (mostly Single-End FASTQ) from the NCBI SRA or ENA databases, you can experience the noise removal and filtering steps yourself by editing the code cell below to match your own file names."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# LESSON 7.4. COLAB FORWARD-LOOKING APPLICATION: Command Structure for Ion Torrent Raw Data\n",
+    "# FOOTNOTE: this cell is prepared as a guide for when you find Ion Torrent raw data in your own work later.\n",
+    "# Since our current dataset has no Ion Torrent file, running this cell directly will error out\n",
+    "# due to the missing input file.\n",
+    "\n",
+    "print(\"Cutadapt noise removal guide for Ion Torrent (Single-End) raw data:\\n\")\n",
+    "\n",
+    "# You can remove the '#' at the start of the command below to run this on data you find yourself:\n",
+    "\n",
+    "# !cutadapt -a CCATCTCATCCCTGCGTGTCTCCGATC \\\n",
+    "#     -q 20 \\\n",
+    "#     -m 30 \\\n",
+    "#     -o filtered_reads/filtered_ion_torrent.fastq \\\n",
+    "#     ion_torrent_raw_data.fastq\n",
+    "\n",
+    "print(\"Command Structure Analysis:\")\n",
+    "print(\"- [-a CCATCTCATC...]: trims the technical adapter noise of the relevant Ion Torrent kit off the ends.\")\n",
+    "print(\"- [-q 20]: shaves off base calls where the Phred quality score drops below 20 (Trimming).\")\n",
+    "print(\"- [-m 30]: filters out short reads that end up under 30 bases after processing and could create noise (Filtering).\")\n",
+    "print(\"- Since there's no reverse read, the -A and -p parameters are not used.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## LESSON 8: Removing Noise From Long-Read Raw Data: Trimming and Filtering Workflows\n",
+    "\n",
+    "Even though the N50 value (read length) is very high in raw data obtained from third-generation sequencing technologies, the noise distribution and adapter architecture are platform-specific. So we can't apply the same procedure to Oxford Nanopore and PacBio data; we need to split our strategy in two based on the nature of the data.\n",
+    "\n",
+    "### 8.1. Long-Read Raw Data: Oxford Nanopore and PacBio Approaches\n",
+    "* **Oxford Nanopore (ONT) Data:** we have to specifically **trim** the motor protein residues left at the start of reads from the raw data. We then need to **filter** this trimmed dataset by quality and length. *(In short, ONT workflow: Trimming + Filtering).*\n",
+    "* **PacBio (SMRT/HiFi) Data:** on modern instruments, circular adapters (SMRTbell) are usually trimmed in hardware by the instrument's internal software and never make it into the raw data at all. So since there's no adapter left to trim, this step is skipped; only **filtering** is applied, to remove very short reads that could disturb the signal in variant analysis. *(In short, PacBio workflow: Filtering only).*\n",
+    "\n",
+    "### 8.2. Pedagogical Split of the Tools We'll Use (Porechop vs. Filtlong)\n",
+    "We split our tools' job descriptions based on the nature of the platforms as follows:\n",
+    "1. **`Porechop` (ONT Only - Trimming Tool):** a specific tool designed only to detect and cut adapters unique to Oxford Nanopore data. **NEVER USED** on PacBio raw data.\n",
+    "2. **`Filtlong` (Universal Long-Read Filter):** a general quality/length filter usable for both technologies (ONT and PacBio). It acts as an aggressive quality filter on ONT data; on PacBio data, whose raw accuracy is already very high (>99.9%), it's used with looser parameters just to remove very short reads."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# LESSON 8.2. COLAB TERMINAL GUIDE: Installing the Long-Read Tools\n",
+    "print(\"Installing the long-read noise removal tools (Porechop and Filtlong)...\\n\")\n",
+    "\n",
+    "!sudo apt-get install porechop filtlong -y\n",
+    "\n",
+    "print(\"\\nInstallation completed successfully. We can move on to the application now.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 8.3. Applying It: Trimming and Filtering Workflow for Oxford Nanopore (ONT) Raw Data\n",
+    "\n",
+    "We run the noise removal process on the long-read raw data we obtained from the Oxford Nanopore platform in two steps:\n",
+    "1. **Porechop (Trimming):** trims technical motor protein adapter sequences that may remain at the start and end of reads.\n",
+    "2. **Filtlong (Filtering):** evaluates the trimmed reads as a whole and removes low-quality and very short reads from the dataset.\n",
+    "\n",
+    "**ONT Filtering Parameter Logic:**\n",
+    "* `--min_length 1000`: removes reads shorter than 1000 bases so they don't create noise in signal analysis and de novo genome assembly steps.\n",
+    "* `--keep_percent 90`: keeps the highest-quality 90% of the dataset, completely filtering out the worst 10%, which has a high raw error rate."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# LESSON 8.3. COLAB APPLICATION: Oxford Nanopore (ONT) Pipeline Execution\n",
+    "!mkdir -p filtered_reads\n",
+    "\n",
+    "print(\"--- PART 1: OXFORD NANOPORE (ONT) WORKFLOW ---\")\n",
+    "print(\"Step 1/2: TRIMMING the motor protein adapters in the ONT data with Porechop...\\n\")\n",
+    "!porechop -i SRR13680735.fastq -o filtered_reads/trimmed_ONT.fastq\n",
+    "\n",
+    "print(\"\\nStep 2/2: FILTERING the trimmed ONT reads with Filtlong...\\n\")\n",
+    "!filtlong --min_length 1000 --keep_percent 90 filtered_reads/trimmed_ONT.fastq > filtered_reads/filtered_ONT.fastq\n",
+    "\n",
+    "print(\"\\nTrimming and filtering steps for the Oxford Nanopore raw data completed successfully!\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 8.4. PacBio Application: Filtering Roadmap for PacBio (SMRT/HiFi) Raw Data\n",
+    "\n",
+    "Dear researchers, if one day in your bioinformatics career you work with a raw dataset from the Pacific Biosciences (**PacBio**) platform, you need to fundamentally change your long-read strategy:\n",
+    "\n",
+    "#### 1. Why Isn't Porechop Used?\n",
+    "PacBio technology wraps DNA fragments with circular adapters (SMRTbell) and reads the same molecule over and over in a loop (Circular Consensus Sequencing - CCS). These circular adapters are automatically trimmed and cleaned up in the instrument's own internal software layer (at the hardware stage). Since there's no adapter left to trim in the raw data (HiFi FASTQ), **the Porechop tool is never used on PacBio data**.\n",
+    "\n",
+    "#### 2. Change in Filtlong Parameters\n",
+    "Thanks to the circular consensus reading logic, PacBio HiFi data reaches a unique level of raw read accuracy (>99.9%). Because of this high accuracy, we don't need as aggressive a quality filter with Filtlong as we do for Nanopore.\n",
+    "\n",
+    "* **Length Threshold Raised (`--min_length 2000`):** to maximize variant-calling accuracy in PacBio data, we usually remove short artificial reads (artifacts) with a higher threshold.\n",
+    "* **Quality Threshold Relaxed (`--keep_percent 95`):** since the data is already very high quality, we keep a large portion of it, around 95%, in the pool so we don't lose biological signal."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# LESSON 8.4. COLAB FORWARD-LOOKING APPLICATION: PacBio (SMRT/HiFi) Pipeline Execution\n",
+    "# FOOTNOTE: this cell is set aside as a guide for when you find independent PacBio raw data in your own work later.\n",
+    "# (Since our current project is hybrid, the ONT file trimmed in the previous step is bridged in as the\n",
+    "# input file here for simulation purposes.)\n",
+    "\n",
+    "print(\"--- PART 2: PacBio (PACBIO SMRT/HiFi) WORKFLOW ---\")\n",
+    "print(\"Running the PacBio raw data directly through Filtlong's length and quality filter...\\n\")\n",
+    "\n",
+    "# PacBio Architecture Parameters: quality preservation is high (95%), minimum length threshold is strict (2000 bases).\n",
+    "!filtlong --min_length 2000 --keep_percent 95 filtered_reads/trimmed_ONT.fastq > filtered_reads/filtered_PacBio_simulation.fastq\n",
+    "\n",
+    "print(\"\\nExcellent! The filtering strategy for the PacBio scenario has been completed in a separate cell.\")\n",
+    "print(\"Our processes are ready for all long-read variations! Now we can move on to Lesson 9 (Re-QC).\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## LESSON 9: Quality Control After Noise Removal (Re-QC) and Verifying Success\n",
+    "\n",
+    "After running noise removal (trimming/filtering) algorithms in bioinformatics workflows, we have to verify the quality of our work. This process is called **Re-QC (Re-Quality Control)** in the literature.\n",
+    "\n",
+    "As a bioinformatician, we should look for these two success criteria in the new reports we'll produce:\n",
+    "1. **Improvement of the Phred Quality Curve:** the plots should move fully into the safe (green, Q30 and above) zone, since low-quality bases have been removed.\n",
+    "2. **Cleared of Technical Sequences:** artificial adapter sequences that created noise in the raw data should approach zero in the plots.\n",
+    "\n",
+    "Now, to verify this, we'll re-analyze our short-read (Illumina) and long-read (Nanopore) data in a parallel structure."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 9.1. Short-Read Re-QC Workflow: Installing and Verifying FastQC\n",
+    "\n",
+    "To analyze our short-read data that's been cleared of noise (the contents of the `filtered_reads/` folder), we first verify and set up `FastQC`, the gold standard for short-read architecture, on our virtual machine."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# LESSON 9.1. COLAB TERMINAL GUIDE: Installing FastQC\n",
+    "print(\"Setting up the short-read Re-QC tool (FastQC)...\\n\")\n",
+    "\n",
+    "# Updating the virtual machine's package list and installing FastQC:\n",
+    "!sudo apt-get update\n",
+    "!sudo apt-get install fastqc -y\n",
+    "\n",
+    "print(\"\\nFastQC tool is ready for the Re-QC analysis.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 9.2. Applying It: FastQC Analysis on the Filtered Short-Read Data\n",
+    "\n",
+    "We feed our trimmed and filtered forward (`filtered_SRR13680736_1.fastq`) and reverse (`filtered_SRR13680736_2.fastq`) read files into the FastQC algorithm, writing the outputs to the `re_qc_reports` folder."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# LESSON 9.2. COLAB APPLICATION: FastQC Report for the Filtered Short Reads\n",
+    "!mkdir -p re_qc_reports\n",
+    "\n",
+    "print(\"Running FastQC on the filtered and trimmed Illumina data...\\n\")\n",
+    "\n",
+    "# The -o parameter writes the outputs to the target folder:\n",
+    "!fastqc filtered_reads/filtered_SRR13680736_1.fastq filtered_reads/filtered_SRR13680736_2.fastq -o re_qc_reports/\n",
+    "\n",
+    "print(\"\\nShort-read Re-QC analysis logs generated successfully.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 9.3. Long-Read Re-QC Workflow: Installing and Verifying NanoPlot\n",
+    "\n",
+    "To measure the N50 length improvement and overall quality scores of our third-generation long-read (Nanopore) data after trimming and filtering, we're updating and preparing the `NanoPlot` library, which is specific to the long-read world."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# LESSON 9.3. COLAB TERMINAL GUIDE: Installing/Updating NanoPlot\n",
+    "print(\"Installing the long-read Re-QC tool (NanoPlot) library...\\n\")\n",
+    "\n",
+    "# Upgrading NanoPlot to the latest version with the Python package manager (pip):\n",
+    "!pip install NanoPlot --upgrade\n",
+    "\n",
+    "print(\"\\nNanoPlot tool was successfully set up for the Re-QC analysis.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 9.4. Applying It: NanoPlot Analysis on the Noise-Cleared Long-Read Data\n",
+    "\n",
+    "We trigger the NanoPlot analysis to examine the final health of our `filtered_ONT.fastq` file, which had its adapter noise trimmed by Porechop and was then filtered by Filtlong."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# LESSON 9.4. COLAB APPLICATION: NanoPlot Report for the Filtered Long Reads\n",
+    "print(\"Running NanoPlot on the noise-cleared Oxford Nanopore data...\\n\")\n",
+    "\n",
+    "# The '--threads 2' parameter runs the processor cores in parallel:\n",
+    "!NanoPlot --fastq filtered_reads/filtered_ONT.fastq -o re_qc_reports/nanoplot_re_qc --threads 2\n",
+    "\n",
+    "print(\"\\nLong-read Re-QC visual maps and statistical summaries generated successfully.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 9.5. Combining Multiple Reports: Installing and Integrating MultiQC\n",
+    "\n",
+    "We now have scattered FastQC and NanoPlot logs for our filtered data. As a bioinformatician, instead of examining this scattered data one by one, we're installing `MultiQC`, the smart reporting tool, to combine it all into a single interactive HTML scorecard."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# LESSON 9.5. COLAB TERMINAL GUIDE: Installing MultiQC\n",
+    "print(\"Installing the final combination tool (MultiQC)...\\n\")\n",
+    "\n",
+    "!pip install multiqc --upgrade\n",
+    "\n",
+    "print(\"\\nMultiQC is ready for integration.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 9.6. Applying It: Producing the Final Re-QC Success Report With MultiQC\n",
+    "\n",
+    "The MultiQC algorithm will go into the `re_qc_reports/` folder, automatically scan the FastQC and NanoPlot data we just produced, and combine it all into a single interactive report."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# LESSON 9.6. COLAB APPLICATION: Combining the MultiQC Report\n",
+    "print(\"MultiQC is scanning all the new Re-QC logs and building the combined report...\\n\")\n",
+    "\n",
+    "# The first parameter is the folder to scan, the '-o' parameter is the output folder:\n",
+    "!multiqc re_qc_reports/ -o re_qc_reports/\n",
+    "\n",
+    "print(\"\\nCongratulations! Your final interactive scorecard after noise removal and filtering is ready.\")\n",
+    "print(\"Please download the newly created 'multiqc_report.html' file from the 're_qc_reports/' folder in the left panel to your computer.\")\n",
+    "print(\"Open this new report side by side with the raw data report from the first lesson in your browser, and see your noise removal success for yourself!\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.10"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
