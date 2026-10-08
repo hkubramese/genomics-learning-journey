@@ -11,7 +11,7 @@ applied to real sequencing data.
 | [`01-python-foundations`](./01-python-foundations) | Python for genomics — data types, functions, FASTA/FASTQ parsing, GC content, Biopython |
 | [`02-bif101-genomics-fundamentals`](./02-bif101-genomics-fundamentals) | Core genomics concepts: sequencing technologies, raw data formats, QC, alignment, variant calling, visualization, cloud platforms |
 | [`03-bif201-ngs-pipeline`](./03-bif201-ngs-pipeline) | A full hybrid short-read + long-read NGS pipeline (Illumina + Nanopore) applied to a bacterial genome — QC through variant calling |
-| ars-coregulation-cancer (separate repository) | Independent research project applying BIF301 skills (RNA-seq, enrichment, ATAC/ChIP) to ARS gene regulation in cancer |
+| [`ars-coregulation-cancer`](https://github.com/hkubramese/ars-coregulation-cancer) (separate repository) | Independent research project applying BIF301 skills (RNA-seq, enrichment, ATAC/ChIP) to ARS gene regulation in cancer |
 
 ## Why this order
 
